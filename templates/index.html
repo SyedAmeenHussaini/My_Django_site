@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %} home{% endblock title %}
+
+
+{% block body %} 
+
+<style>
+  #carosalMenu{
+    height: 600px;
+    width: 1600px;
+  }
+</style>
+<div class="container-fluid  px-0">
+    <div id="carouselExampleDark" class="carousel carousel-dark slide" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+          <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+          <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="1" aria-label="Slide 2"></button>
+          <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="2" aria-label="Slide 3"></button>
+        </div>
+        <div class="carousel-inner">
+          <div class="carousel-item active" data-bs-interval="10000">
+            <img src="https://source.unsplash.com/1600x600/?icecream" class="d-block w-200" alt="..." id="carosalMenu">
+            <div class="carousel-caption d-none d-md-block">
+              <h5>This IceCreams Like Miracle Test</h5>
+              <p>Order And Enjoy it!!.</p>
+            </div>
+          </div>
+          <div class="carousel-item" data-bs-interval="2000">
+            <img src="https://source.unsplash.com/1600x600/?IceCreams" class="d-block w-100" alt="..." id="carosalMenu">
+            <div class="carousel-caption d-none d-md-block">
+              <h5>Also Order BY Online!</h5>
+              <p>Best Test in Hometown.</p>
+            </div>
+          </div>
+          <div class="carousel-item">
+            <img src="https://wallpapercave.com/wp/wp3989381.jpg" class="d-block w-100" alt="..." id="carosalMenu">
+            <div class="carousel-caption d-none d-md-block">
+              <h5>Tested By SRK!</h5>
+              <p>Best Ice Cream Quality..</p>
+            </div>
+          </div>    
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleDark" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleDark" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
+</div>
+
+<div class="container ">
+<h1 class='my-2 text-center'>Please Select Which IceCreams You want!<h1>
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+      <div class="col">
+        <div class="card shadow-sm">
+            <img src="https://source.unsplash.com/500x500/?Icecream" class="d-block w-30" alt="...">
+          <div class="card-body">
+            <p class="card-text  "> Vanila Iceream!.</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary">View </button>
+              </div>
+            </div>
+                <h4 class="Price">150RS<small class="Quantity">/cup</small></h4>
+              
+            
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card shadow-sm">
+           <img src="https://source.unsplash.com/500x500/?Mango flavour icecream" class="d-block w-30" alt="...">
+
+          <div class="card-body">
+            <p class="card-text">Mango flvr.</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="btn-group">
+                <button type="button"class="btn btn-sm btn-outline-secondary">View</button>
+               
+              </div>
+            </div>
+            <h4 class="Price">200RS<small class="Quantity">/cup</small></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card shadow-sm">
+            <img src="https://source.unsplash.com/500x500/?chocolates" class="d-block w-30" alt="...">
+          <div class="card-body">
+            <p class="card-text">Chocolate flvr.</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+              </div>
+            </div>
+                <h4 class="Price">180RS<small class="Quantity">/cup</small></h4>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+     
+  </div>
+
+{% endblock body  %} 
+
+
+
