@@ -35,9 +35,11 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
-            # Stop any running Docker container
-            sudo docker stop my_django_container || true
-            sudo docker rm my_django_container || true
+            # Check if the container is running and stop it if it is
+            if sudo docker ps -q -f name=my_django_container; then
+              sudo docker stop my_django_container
+              sudo docker rm my_django_container
+            fi
 
             # Run new Docker container
             sudo docker run -d --name my_django_container -p 8000:8000 my_django_app
