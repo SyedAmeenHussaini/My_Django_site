@@ -32,19 +32,19 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          echo "$EC2_SSH_KEY" > private_key.pem  # Saving the private key to a file
-          chmod 600 private_key.pem  # Securing the key file
+          # Save private key
+          echo "$EC2_SSH_KEY" > private_key.pem
+          chmod 600 private_key.pem
           
-          # SSH into EC2 and execute deployment commands
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
-            # Stop and remove the existing Docker container (if any)
+          # Test if the host resolves correctly
+          echo "EC2 Host: $EC2_HOST"
+
+          # SSH into EC2 and deploy the app
+          ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t $EC2_USER@$EC2_HOST << 'EOF'
+            # Stop and remove existing Docker container (if any)
             docker stop my_django_container || true
             docker rm my_django_container || true
 
-            # Pull the latest Docker image (if you are using Docker Hub or ECR)
-            # Uncomment the line below if you're pulling from Docker Hub/ECR
-            # docker pull your_dockerhub_username/my_django_app
-
-            # Run the new Docker container with the latest image
+            # Run the new Docker container
             docker run -d --name my_django_container -p 8000:8000 my_django_app
           EOF
