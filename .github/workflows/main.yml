@@ -28,17 +28,17 @@ jobs:
 
       - name: SSH to EC2 and deploy
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}  # Using the PEM key from GitHub Secrets
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}  # PEM key from GitHub Secrets
           EC2_USER: ${{ secrets.EC2_USER }}            # Your EC2 user, e.g., 'ec2-user', 'ubuntu'
-          EC2_HOST: ${{ secrets.EC2_HOST }}            # Your EC2 instance public IP (3.110.225.229)
+          EC2_HOST: ${{ secrets.EC2_HOST }}            # Your EC2 instance public IP (e.g., 3.110.225.229)
         run: |
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
             # Stop any running Docker container
-            docker stop my_django_container || true
-            docker rm my_django_container || true
+            sudo docker stop my_django_container || true
+            sudo docker rm my_django_container || true
 
             # Run new Docker container
-            docker run -d --name my_django_container -p 8000:8000 my_django_app
+            sudo docker run -d --name my_django_container -p 8000:8000 my_django_app
           EOF
