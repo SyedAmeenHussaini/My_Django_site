@@ -28,9 +28,9 @@ jobs:
 
       - name: SSH to EC2 and deploy
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_HOST: ${{ secrets.EC2_HOST }} # Already set as 3.110.225.229
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}  # Using the PEM key from GitHub Secrets
+          EC2_USER: ${{ secrets.EC2_USER }}            # Your EC2 user, e.g., 'ec2-user', 'ubuntu'
+          EC2_HOST: ${{ secrets.EC2_HOST }}            # Your EC2 instance public IP (3.110.225.229)
         run: |
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
