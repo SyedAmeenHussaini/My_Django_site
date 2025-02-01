@@ -3,7 +3,7 @@ name: CI/CD Pipeline with Docker and ECR
 on:
   push:
     branches:
-      - main  # Trigger on push to the main branch
+      - main  # Trigger on push to the main branchh
 
 jobs:
   build-and-deploy:
