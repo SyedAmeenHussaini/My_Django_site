@@ -1,46 +1,36 @@
-name: Deploy Django Application
+name: Django Deployment to EC2
 
 on:
   push:
     branches:
-      - main  # Change this to your default branch
+      - main  # Run the workflow on push to the main branch
 
 jobs:
   deploy:
+    name: Build and Deploy Django App to EC2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.10'
+    - name: Set up SSH for Deployment
+      uses: appleboy/ssh-action@v1.1.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        port: 22
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+    - name: Copy Project Files to EC2
+      run: |
+        rsync -avz --exclude='.git' --exclude='.github' . ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/django-app/
 
-      - name: Build Docker image
-        run: |
-          docker build -t my_django_app .
-
-      - name: SSH to EC2 and deploy
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}  # PEM key from GitHub Secrets
-          EC2_USER: ${{ secrets.EC2_USER }}            # Your EC2 user, e.g., 'ec2-user', 'ubuntu'
-          EC2_HOST: ${{ secrets.EC2_HOST }}            # Your EC2 instance public IP (e.g., 3.110.225.229)
-        run: |
-          echo "$SSH_PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
-            # Check if the container is running and stop it if it is
-            if sudo docker ps -q -f name=my_django_container; then
-              sudo docker stop my_django_container
-              sudo docker rm my_django_container
-            fi
-
-            # Run new Docker container
-            sudo docker run -d --name my_django_container -p 8000:8000 my_django_app
-          EOF
+    - name: Install Dependencies and Run Docker Compose on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+          cd /home/${{ secrets.EC2_USER }}/django-app
+          docker-compose down || true
+          docker-compose build
+          docker-compose up -d
+        EOF
