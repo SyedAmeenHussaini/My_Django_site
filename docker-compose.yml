@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${DOCKER_IMAGE_NAME:-django-app:latest}  # Use an environment variable for image name
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app  # Mount current project directory into the container
@@ -14,3 +15,12 @@ services:
     environment:
       - DEBUG=True
       - DJANGO_SETTINGS_MODULE=Hello.settings
+    networks:
+      - app_network
+    # Uncomment the lines below if you have other services like a database
+    # depends_on:
+    #   - db
+
+networks:
+  app_network:
+    driver: bridge
