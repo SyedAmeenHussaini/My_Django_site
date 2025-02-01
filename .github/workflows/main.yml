@@ -1,41 +1,49 @@
-name: Deploy Django App
+name: Django CI/CD Pipeline
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger the pipeline on push to the main branch
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v2
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v2
       with:
-        python-version: '3.x'
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Set Django SECRET_KEY
-      run: echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
+    - name: Run tests
+      run: |
+        python manage.py test
+
+    - name: Build Docker image
+      run: docker-compose build
+
+    - name: Save Docker image
+      run: docker save -o django_app.tar web
 
     - name: Deploy to EC2
+      env:
+        EC2_IP: ${{ secrets.EC2_IP }}
+        SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        ssh -i ${{ secrets.EC2_PRIVATE_KEY }} -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-          # Export the Django SECRET_KEY
-          export DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
-          # Perform your Django deployment steps here
-          cd /path/to/your/django/project
-          source venv/bin/activate
-          python manage.py migrate
-          python manage.py collectstatic --noinput
-          # Restart the application server if necessary (e.g., Gunicorn, Nginx)
-          sudo systemctl restart gunicorn
-        EOF
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $EC2_IP >> ~/.ssh/known_hosts
+
+        scp -o StrictHostKeyChecking=no django_app.tar ubuntu@$EC2_IP:/home/ubuntu/
+        ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker load -i /home/ubuntu/django_app.tar"
+        ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose down"
+        ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose up -d"
