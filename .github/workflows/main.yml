@@ -36,13 +36,29 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose
 
+    - name: Log in to Amazon ECR
+      run: |
+        aws --version  # Verify that AWS CLI is installed
+        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
     - name: Build Docker image
       run: docker-compose build web  # Build the specific 'web' service
 
-    - name: Save Docker image
-      run: docker save -o django_app.tar web  # Save the 'web' image
+    - name: Tag Docker image
+      run: |
+        IMAGE_NAME="web"
+        TAG="latest"
+        REPOSITORY_URI="${{ secrets.ECR_REGISTRY }}/django-app"
+        docker tag $IMAGE_NAME:latest $REPOSITORY_URI:$TAG
 
-    - name: Deploy to EC2
+    - name: Push Docker image to ECR
+      run: |
+        IMAGE_NAME="web"
+        TAG="latest"
+        REPOSITORY_URI="${{ secrets.ECR_REGISTRY }}/django-app"
+        docker push $REPOSITORY_URI:$TAG
+
+    - name: Deploy to EC2 (optional)
       env:
         EC2_IP: ${{ secrets.EC2_IP }}
         SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -52,6 +68,7 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H $EC2_IP >> ~/.ssh/known_hosts
 
+        # Optional: Push to EC2 only if necessary
         scp -o StrictHostKeyChecking=no django_app.tar ubuntu@$EC2_IP:/home/ubuntu/
         ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker load -i /home/ubuntu/django_app.tar"
         ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose down"
