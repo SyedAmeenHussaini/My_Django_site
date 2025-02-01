@@ -34,13 +34,17 @@ jobs:
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
         echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
     - name: Build Docker image
       run: docker-compose build
 
+    - name: Tag Docker image
+      run: |
+        docker tag $(docker images -q django_web) web:latest
+
     - name: Save Docker image
-      run: docker save -o django_app.tar web
+      run: docker save -o django_app.tar web:latest
 
     - name: Deploy to EC2
       env:
