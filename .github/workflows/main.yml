@@ -1,75 +1,43 @@
-name: Django CI/CD Pipeline
+name: CI/CD Pipeline with Docker and ECR
 
 on:
   push:
     branches:
-      - main  # Trigger the pipeline on push to the main branch
+      - main  # Trigger on push to the main branch
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Set the runner to use Ubuntu
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    # Set up AWS CLI credentials for non-interactive use
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        python-version: '3.10'
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Install dependencies
+    # Set up Docker Buildx for multi-platform support
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    # Authenticate Docker to Amazon ECR
+    - name: Authenticate Docker to Amazon ECR
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-    - name: Run tests
-      run: |
-        python manage.py test
-
-    - name: Set up Docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose
-
-    - name: Log in to Amazon ECR
-      run: |
-        aws --version  # Verify that AWS CLI is installed
-        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
-
+    # Build Docker image
     - name: Build Docker image
-      run: docker-compose build web  # Build the specific 'web' service
+      run: docker build -t my-image .
 
-    - name: Tag Docker image
-      run: |
-        IMAGE_NAME="web"
-        TAG="latest"
-        REPOSITORY_URI="${{ secrets.ECR_REGISTRY }}/django-app"
-        docker tag $IMAGE_NAME:latest $REPOSITORY_URI:$TAG
+    # Tag Docker image for ECR
+    - name: Tag Docker image for ECR
+      run: docker tag my-image:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest
 
+    # Push Docker image to ECR
     - name: Push Docker image to ECR
-      run: |
-        IMAGE_NAME="web"
-        TAG="latest"
-        REPOSITORY_URI="${{ secrets.ECR_REGISTRY }}/django-app"
-        docker push $REPOSITORY_URI:$TAG
-
-    - name: Deploy to EC2 (optional)
-      env:
-        EC2_IP: ${{ secrets.EC2_IP }}
-        SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H $EC2_IP >> ~/.ssh/known_hosts
-
-        # Optional: Push to EC2 only if necessary
-        scp -o StrictHostKeyChecking=no django_app.tar ubuntu@$EC2_IP:/home/ubuntu/
-        ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker load -i /home/ubuntu/django_app.tar"
-        ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose down"
-        ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose up -d"
+      run: docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest
