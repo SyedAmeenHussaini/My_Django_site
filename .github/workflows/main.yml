@@ -1,43 +1,25 @@
-name: CI/CD Pipeline with Docker and ECR
+name: Push Docker Image to ECR
 
 on:
   push:
     branches:
-      - main  # Trigger on push to the main branchh
+      - main
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest  # Set the runner to use Ubuntu
+  build-and-push:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Set up AWS CLI credentials for non-interactive use
-    - name: Set up AWS CLI
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-
-    # Set up Docker Buildx for multi-platform support
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    # Authenticate Docker to Amazon ECR
-    - name: Authenticate Docker to Amazon ECR
+    - name: Set up AWS ECR credentials
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and push Docker image to Amazon ECR
       run: |
-        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-
-    # Build Docker image
-    - name: Build Docker image
-      run: docker build -t my-image .
-
-    # Tag Docker image for ECR
-    - name: Tag Docker image for ECR
-      run: docker tag my-image:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest
-
-    # Push Docker image to ECR
-    - name: Push Docker image to ECR
-      run: docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest
+        docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest .
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest
