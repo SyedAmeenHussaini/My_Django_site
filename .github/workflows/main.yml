@@ -1,9 +1,9 @@
-name: Push Docker Image to ECR
+name: Push Docker Image to ECR without Docker Authentication
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger the pipeline on push to the main branch
 
 jobs:
   build-and-push:
@@ -13,13 +13,34 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
 
-    - name: Set up AWS ECR credentials
-      uses: aws-actions/amazon-ecr-login@v1
-
-    - name: Build and push Docker image to Amazon ECR
+    - name: Install dependencies
       run: |
-        docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest .
-        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repository:latest
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build Docker image
+      run: |
+        docker build -t my-app .
+
+    - name: Save Docker image as tarball
+      run: |
+        docker save -o my_app_image.tar my-app
+
+    - name: Configure AWS CLI
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws configure set region ${{ secrets.AWS_REGION }}
+
+    - name: Push image to ECR using AWS CLI (without Docker login)
+      run: |
+        aws ecr batch-get-image --repository-name my-repository \
+          --image-ids imageTag=latest --output json
+        aws ecr put-image --repository-name my-repository \
+          --image-tag latest \
+          --image-manifest file://my_app_image.tar
