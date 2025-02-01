@@ -1,36 +1,41 @@
-name: Django Deployment to EC2
+name: Deploy Django App
 
 on:
   push:
     branches:
-      - main  # Run the workflow on push to the main branch
+      - main
 
 jobs:
   deploy:
-    name: Build and Deploy Django App to EC2
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    - name: Set up SSH for Deployment
-      uses: appleboy/ssh-action@v1.1.0
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        port: 22
+        python-version: '3.x'
 
-    - name: Copy Project Files to EC2
+    - name: Install dependencies
       run: |
-        rsync -avz --exclude='.git' --exclude='.github' . ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/django-app/
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-    - name: Install Dependencies and Run Docker Compose on EC2
+    - name: Set Django SECRET_KEY
+      run: echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
+
+    - name: Deploy to EC2
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-          cd /home/${{ secrets.EC2_USER }}/django-app
-          docker-compose down || true
-          docker-compose build
-          docker-compose up -d
+        ssh -i ${{ secrets.EC2_PRIVATE_KEY }} -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+          # Export the Django SECRET_KEY
+          export DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
+          # Perform your Django deployment steps here
+          cd /path/to/your/django/project
+          source venv/bin/activate
+          python manage.py migrate
+          python manage.py collectstatic --noinput
+          # Restart the application server if necessary (e.g., Gunicorn, Nginx)
+          sudo systemctl restart gunicorn
         EOF
