@@ -1,9 +1,9 @@
-name: Push Docker Image to ECR without Docker Authentication
+name: Push Docker Image to ECR
 
 on:
   push:
     branches:
-      - main  # Trigger the pipeline on push to the main branch
+      - main
 
 jobs:
   build-and-push:
@@ -27,20 +27,25 @@ jobs:
       run: |
         docker build -t my-app .
 
-    - name: Save Docker image as tarball
-      run: |
-        docker save -o my_app_image.tar my-app
-
     - name: Configure AWS CLI
       run: |
         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws configure set region ${{ secrets.AWS_REGION }}
 
-    - name: Push image to ECR using AWS CLI (without Docker login)
+    - name: Create ECR Repository (if it doesn't exist)
       run: |
-        aws ecr batch-get-image --repository-name my-repository \
-          --image-ids imageTag=latest --output json
-        aws ecr put-image --repository-name my-repository \
-          --image-tag latest \
-          --image-manifest file://my_app_image.tar
+        aws ecr describe-repositories --repository-names django-app --region ${{ secrets.AWS_REGION }} || \
+        aws ecr create-repository --repository-name django-app --region ${{ secrets.AWS_REGION }}
+
+    - name: Authenticate Docker to AWS ECR
+      run: |
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+    - name: Tag Docker image
+      run: |
+        docker tag my-app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/django-app:latest
+
+    - name: Push Docker image to ECR
+      run: |
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/django-app:latest
