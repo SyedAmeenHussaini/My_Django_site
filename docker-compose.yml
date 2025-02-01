@@ -4,25 +4,13 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile  # Your Dockerfile location
+      dockerfile: Dockerfile
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/app  # Mount the current directory to /app in the container
+      - .:/app  # Mount current project directory into the container
+      - ./db.sqlite3:/app/db.sqlite3  # Persist the SQLite database file
     ports:
-      - "8000:8000"  # Expose port 8000
+      - "8000:8000"
     environment:
       - DEBUG=True
       - DJANGO_SETTINGS_MODULE=Hello.settings
-      - DATABASE_URL=postgres://user:password@db:5432/mydatabase  # Use your actual database URL
-
-  db:
-    image: postgres:13  # Use the official PostgreSQL image
-    volumes:
-      - postgres_data:/var/lib/postgresql/data  # Persist data
-    environment:
-      - POSTGRES_DB=mydatabase
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-
-volumes:
-  postgres_data:
