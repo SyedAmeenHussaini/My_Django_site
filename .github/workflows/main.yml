@@ -3,7 +3,7 @@ name: Django CI/CD Pipeline
 on:
   push:
     branches:
-      - main  # Trigger the pipeline on push to the main branchh
+      - main  # Trigger the pipeline on push to the main branch
 
 jobs:
   build-and-deploy:
@@ -27,6 +27,12 @@ jobs:
       run: |
         python manage.py test
 
+    - name: Set up Docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker.io
+        sudo apt-get install -y docker-compose
+
     - name: Build Docker image
       run: docker-compose build
 
@@ -43,7 +49,10 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H $EC2_IP >> ~/.ssh/known_hosts
 
+        # Copy Docker image to EC2
         scp -o StrictHostKeyChecking=no django_app.tar ubuntu@$EC2_IP:/home/ubuntu/
+
+        # Load Docker image and deploy
         ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker load -i /home/ubuntu/django_app.tar"
         ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose down"
         ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP "docker-compose up -d"
