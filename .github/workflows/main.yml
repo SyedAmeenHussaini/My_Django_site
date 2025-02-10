@@ -1,4 +1,4 @@
-name: Push Docker Image to ECR
+name: CI/CD Pipeline for AWS EC2
 
 on:
   push:
@@ -6,46 +6,48 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  build-deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
 
+    env:
+      APP_NAME: my_app_name
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    - name: Set up Node.js (Optional)
+      uses: actions/setup-node@v3
       with:
-        python-version: '3.10'
+        node-version: "16"
 
-    - name: Install dependencies
+    - name: Install Dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        npm install  # Change this command based on your project
 
-    - name: Build Docker image
-      run: |
-        docker build -t my-app .
+    - name: Test Application (Optional)
+      run: npm run test
 
-    - name: Configure AWS CLI
-      run: |
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws configure set region ${{ secrets.AWS_REGION }}
+    - name: Archive App for Deployment
+      run: zip -r app.zip .
 
-    - name: Create ECR Repository (if it doesn't exist)
-      run: |
-        aws ecr describe-repositories --repository-names django-app --region ${{ secrets.AWS_REGION }} || \
-        aws ecr create-repository --repository-name django-app --region ${{ secrets.AWS_REGION }}
+    - name: Transfer Files to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        source: "app.zip"
+        target: "~/"
 
-    - name: Authenticate Docker to AWS ECR
-      run: |
-        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-
-    - name: Tag Docker image
-      run: |
-        docker tag my-app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/django-app:latest
-
-    - name: Push Docker image to ECR
-      run: |
-        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/django-app:latest
+    - name: Deploy on EC2
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          sudo apt update
+          unzip -o app.zip -d /var/www/html/
+          sudo systemctl restart nginx
