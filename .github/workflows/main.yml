@@ -39,4 +39,4 @@ jobs:
               --name django_app \
               -p 8000:8000 \
               django-app:latest
-EOF
+              
