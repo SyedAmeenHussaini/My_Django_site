@@ -43,7 +43,7 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_SSH_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
         run: |
-          echo "$EC2_SSH_KEY" > deploy_key.pem
+          echo "$EC2_PRIVATE_KEY" > deploy_key.pem
           chmod 600 deploy_key.pem
           scp -o StrictHostKeyChecking=no -i deploy_key.pem -r . $EC2_USER@$EC2_HOST:/home/ubuntu/django-app
           ssh -o StrictHostKeyChecking=no -i deploy_key.pem $EC2_USER@$EC2_HOST "
