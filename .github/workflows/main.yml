@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for AWS EC2
+name: CI/CD for Django on AWS EC2
 
 on:
   push:
@@ -6,31 +6,27 @@ on:
       - main
 
 jobs:
-  build-deploy:
-    name: Build and Deploy
+  deploy:
+    name: Deploy Django on AWS EC2
     runs-on: ubuntu-latest
-
-    env:
-      APP_NAME: my_app_name
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Set up Node.js (Optional)
-      uses: actions/setup-node@v3
+    - name: Install Python and Dependencies
+      uses: actions/setup-python@v4
       with:
-        node-version: "16"
+        python-version: "3.9"
 
-    - name: Install Dependencies
+    - name: Install Project Dependencies
       run: |
-        npm install  # Change this command based on your project
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
 
-    - name: Test Application (Optional)
-      run: npm run test
-
-    - name: Archive App for Deployment
-      run: zip -r app.zip .
+    - name: Archive Django Project for Deployment
+      run: zip -r My_Django_site.zip .
 
     - name: Transfer Files to EC2
       uses: appleboy/scp-action@v0.1.7
@@ -38,10 +34,10 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        source: "app.zip"
+        source: "My_Django_site.zip"
         target: "~/"
 
-    - name: Deploy on EC2
+    - name: Deploy and Restart Server on EC2
       uses: appleboy/ssh-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -49,5 +45,14 @@ jobs:
         key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         script: |
           sudo apt update
-          unzip -o app.zip -d /var/www/html/
+          sudo apt install -y python3-pip python3-venv unzip
+          rm -rf ~/My_Django_site
+          unzip -o My_Django_site.zip -d ~/My_Django_site
+          cd ~/My_Django_site
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py collectstatic --noinput
+          python manage.py migrate
+          sudo systemctl restart gunicorn
           sudo systemctl restart nginx
