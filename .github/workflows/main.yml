@@ -3,7 +3,7 @@ name: Django CI/CD Pipeline
 on:
   push:
     branches:
-      - main  # Trigger on push to the main branchb
+      - main  # Trigger on push to the main branch
 
 jobs:
   build-and-deploy:
@@ -28,27 +28,35 @@ jobs:
 
       # Run tests (optional)
       - name: Run tests
-        run: |
-          python manage.py test
+        run: python manage.py test
 
       # Build Docker image
       - name: Build Docker image
-        run: |
-          docker build -t django-app .
+        run: docker build -t django-app .
 
       # Deploy to EC2
       - name: Deploy to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          EC2_PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
         run: |
-          echo "$EC2_PRIVATE_KEY" > deploy_key.pem
+          # Configure SSH key
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" | tr -d '\r' > deploy_key.pem
           chmod 600 deploy_key.pem
-          scp -o StrictHostKeyChecking=no -i deploy_key.pem -r . $EC2_USER@$EC2_HOST:/home/ubuntu/django-app
-          ssh -o StrictHostKeyChecking=no -i deploy_key.pem $EC2_USER@$EC2_HOST "
-            cd /home/ubuntu/django-app &&
-            docker stop django-app || true &&
-            docker rm django-app || true &&
+
+          # Copy Docker Compose or deployment files (if needed)
+          scp -o StrictHostKeyChecking=no -i deploy_key.pem \
+            docker-compose.yml $EC2_USER@$EC2_HOST:/home/ubuntu/ || true
+
+          # Deploy and restart the application on EC2
+          ssh -o StrictHostKeyChecking=no -i deploy_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd /home/ubuntu/
+
+            # Stop and remove the existing container
+            docker stop django-app || true
+            docker rm django-app || true
+
+            # Pull any image updates (if using a registry) and run container
             docker run -d --name django-app -p 8000:8000 django-app
-          "
+EOF
