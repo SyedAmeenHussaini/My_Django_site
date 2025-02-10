@@ -11,48 +11,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
+    - name: Checkout Source Code
       uses: actions/checkout@v3
 
-    - name: Install Python and Dependencies
+    - name: Set Up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.9"
 
-    - name: Install Project Dependencies
+    - name: Install Python Dependencies
       run: |
         python -m venv venv
         source venv/bin/activate
         pip install -r requirements.txt
-
-    - name: Archive Django Project for Deployment
-      run: zip -r My_Django_site.zip .
 
     - name: Transfer Files to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        source: "My_Django_site.zip"
-        target: "~/"
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        source: "."
+        target: "~/My_Django_site"
 
-    - name: Deploy and Restart Server on EC2
+    - name: Deploy and Restart Services on EC2
       uses: appleboy/ssh-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
           sudo apt update
-          sudo apt install -y python3-pip python3-venv unzip
-          rm -rf ~/My_Django_site
-          unzip -o My_Django_site.zip -d ~/My_Django_site
+          sudo apt install -y python3-pip python3-venv
           cd ~/My_Django_site
           python3 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
-          python manage.py collectstatic --noinput
           python manage.py migrate
+          python manage.py collectstatic --noinput
           sudo systemctl restart gunicorn
           sudo systemctl restart nginx
