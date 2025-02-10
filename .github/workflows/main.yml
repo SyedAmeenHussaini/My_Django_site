@@ -23,15 +23,17 @@ jobs:
 
       - name: Transfer Docker Image to EC2
         env:
-          SSH_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
-          scp -o StrictHostKeyChecking=no -i "$SSH_KEY" django-app.tar.gz ubuntu@${{ secrets.EC2_HOST }}:~/django-app.tar.gz
+          echo "${SSH_KEY}" > key.pem
+          chmod 400 key.pem
+          scp -o StrictHostKeyChecking=no -i key.pem django-app.tar.gz ubuntu@${{ secrets.EC2_HOST }}:~/django-app.tar.gz
 
       - name: SSH to EC2 and Deploy
         env:
-          SSH_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             gunzip -c ~/django-app.tar.gz | docker load
             docker stop django_app || true
             docker rm django_app || true
@@ -39,4 +41,3 @@ jobs:
               --name django_app \
               -p 8000:8000 \
               django-app:latest
-              
