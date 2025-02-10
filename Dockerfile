@@ -1,26 +1,25 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.10-slim
+# Use an official Python runtime as a base image
+FROM python:3.9-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV DJANGO_SETTINGS_MODULE=Hello.settings
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Set the working directory in the container
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the requirements.txt into the container at /app
-COPY requirements.txt /app/
+# Copy the requirements file first to leverage Docker's layer caching
+COPY requirements.txt .
 
-# Install any dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Install Python dependencies
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
 
-# Copy the current directory contents into the container at /app
-COPY . /app/
+# Copy the entire project directory
+COPY . .
 
-# Expose the port that the Django app runs on
+# Expose port 8000 for Django
 EXPOSE 8000
 
-# Run the Django development server
+# Run database migrations and start the server
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
