@@ -1,45 +1,31 @@
-name: Deploy to EC2
+name: Deploy Django App
 
 on:
   push:
     branches:
-      - main  # Trigger deployment when code is pushed to the main branch
+      - main
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Use Ubuntu runner for the action
-    
-    steps:
-      # Step 1: Checkout the repository
-      - name: Checkout repository
-        uses: actions/checkout@v2  # Checkout the code from the GitHub repo
+    runs-on: ubuntu-latest
 
-      # Step 2: Set up SSH key for authentication
-      - name: Set up SSH key
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa  # Create private key file
-          chmod 600 ~/.ssh/id_rsa  # Set appropriate permissions for the private key
-          ssh-keyscan -H ${{ secrets.EC2_PUBLIC }} >> ~/.ssh/known_hosts  # Add EC2's public key to known hosts
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Reference the secret for the private SSH key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC}} >> ~/.ssh/known_hosts
 
-      # Step 3: Build Docker image
-      - name: Build Docker image
+      - name: Deploy to AWS EC2
         run: |
-          docker build -t django-app .
-
-      # Step 4: Save Docker image and transfer to EC2 using SCP
-      - name: Save Docker image and transfer to EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_PUBLIC }}  # EC2 public IP from GitHub secrets
-          username: ubuntu  # EC2 username (usually 'ubuntu' for Ubuntu instances)
-          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Your private SSH key from GitHub secrets
-          source: docker save django-app:latest | gzip  # Save and compress the Docker image
-          target: ~/django-app.tar.gz  # Target location on EC2
-          port: 22  # Default SSH port
-          protocol: tcp  # SCP protocol (TCP)
-          timeout: 30s  # Set timeout for the SCP action
-          command_timeout: 10m  # Set command timeout
-          tar_exec: tar  # Specify tar command for extracting files on EC2
+          ssh ubuntu@${{ secrets.EC2_PUBLIC}} << 'EOF'
+          cd /home/ubuntu/django-app
+          git pull origin main
+          docker-compose down
+          docker-compose build
+          docker-compose up -d
+          EOF
