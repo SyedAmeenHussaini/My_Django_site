@@ -18,11 +18,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_PUBLIC}} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: ssh -v -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC }} echo "SSH connection successful"
 
       - name: Deploy to AWS EC2
         run: |
-          ssh ubuntu@${{ secrets.EC2_PUBLIC}} << 'EOF'
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC }} << 'EOF'
           cd /home/ubuntu/django-app
           git pull origin main
           docker-compose down
