@@ -11,15 +11,19 @@ WORKDIR /app
 # Copy the requirements file first to leverage Docker's layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install dependencies
 RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+    && pip install -r requirements.txt \
+    && pip install gunicorn
 
 # Copy the entire project directory
 COPY . .
 
+# Ensure the SQLite database is stored in a volume-mounted directory
+RUN mkdir -p /app/db
+
 # Expose port 8000 for Django
 EXPOSE 8000
 
-# Run database migrations and start the server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Run database migrations and start Gunicorn server
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "Hello.wsgi:application"]

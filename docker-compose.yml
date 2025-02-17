@@ -5,11 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${DOCKER_IMAGE_NAME:-django-app:latest}  # Use an environment variable for image name
-    command: python manage.py runserver 0.0.0.0:8000
+    image: django-app:latest
+    container_name: django_app
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 Hello.wsgi:application"
     volumes:
       - .:/app  # Mount current project directory into the container
-      - ./db.sqlite3:/app/db.sqlite3  # Persist the SQLite database file
+      - ./db:/app/db  # Persist the SQLite database
     ports:
       - "8000:8000"
     environment:
@@ -17,9 +20,6 @@ services:
       - DJANGO_SETTINGS_MODULE=Hello.settings
     networks:
       - app_network
-    # Uncomment the lines below if you have other services like a database
-    # depends_on:
-    #   - db
 
 networks:
   app_network:
