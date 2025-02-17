@@ -16,18 +16,14 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github-ec2-key
-
-          chmod 600 ~/.ssh/github-ec2-key
-
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_PUBLIC }} >> ~/.ssh/known_hosts
 
       - name: Debug SSH key
         run: |
-          cat ~/.ssh/github-ec2-key
-
-          ls -l ~/.ssh/github-ec2-key
-
+          cat ~/.ssh/id_rsa
+          ls -l ~/.ssh/id_rsa
 
       - name: Test SSH connection
         run: ssh -vvv -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC }} echo "SSH connection successful"
