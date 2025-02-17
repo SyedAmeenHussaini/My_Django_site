@@ -1,3 +1,4 @@
+
 name: Deploy Django App to EC2
 
 on:
@@ -6,6 +7,7 @@ on:
       - main
 
 jobs:
+
   build-and-deploy:
     runs-on: ubuntu-latest
 
