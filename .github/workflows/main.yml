@@ -20,8 +20,13 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_PUBLIC }} >> ~/.ssh/known_hosts
 
+      - name: Debug SSH key
+        run: |
+          cat ~/.ssh/id_rsa
+          ls -l ~/.ssh/id_rsa
+
       - name: Test SSH connection
-        run: ssh -v -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC }} echo "SSH connection successful"
+        run: ssh -vvv -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC }} echo "SSH connection successful"
 
       - name: Deploy to AWS EC2
         run: |
