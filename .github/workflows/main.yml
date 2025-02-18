@@ -22,20 +22,20 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
-          host: ${{ secrets.EC2_HOST }}  # Ensure this secret contains your EC2's IP
-          username: ubuntu  # Ensure 'ubuntu' is used since your EC2 uses Ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}  # Ensure the correct private key is stored in secrets
+          host: ${{ secrets.EC2_HOST }}  # Your EC2's public IP or hostname
+          username: ubuntu  # Assuming your EC2 is running Ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key stored in GitHub secrets
           script: |
-            # Check if the /app directory exists; if not, create it
+            # Check if the /app directory exists; if not, clone the repository
             if [ ! -d "/app" ]; then
               echo "Directory /app not found. Cloning repository..."
-              git clone https://github.com/your-repository-url.git /app
+              git clone https://github.com/SyedAmeenHussaini/My_Django_site.git /app
             else
               cd /app
               git pull origin main
             fi
             
-            # Install docker-compose if not already installed
+            # Install Docker Compose if not already installed
             if ! command -v docker-compose &> /dev/null; then
               echo "Docker Compose not found, installing..."
               sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
