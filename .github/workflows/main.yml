@@ -1,35 +1,40 @@
-name: Django CI/CD Deployment
+name: Deploy Django to EC2
 
 on:
   push:
     branches:
-      - main  # Runs on push to main branch
-  workflow_dispatch:  # Allows manual trigger
+      - main  # Adjust if needed
 
 jobs:
   deploy:
-    runs-on: self-hosted  # Run on your self-hosted server
-
+    runs-on: self-hosted  # Uses your self-hosted runner
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Copy project to EC2
+      - name: Deploy code to EC2
         run: |
-          rsync -avz --exclude='db/*' -e "ssh -i ~/.ssh/id_rsa" ./ ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/django-app
+          rsync -avz --progress --exclude='db/*' \
+            -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" \
+            ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/django-app
 
-      - name: Deploy on EC2
+      - name: Run Docker container on EC2
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/django-app
+            
+            # Build and run the container
             docker-compose down
-            docker-compose build
-            docker-compose up -d --force-recreate
+            docker-compose up --build -d
+            
+            # Cleanup old Docker images
+            docker system prune -af
           EOF
