@@ -1,36 +1,53 @@
-name: Deploy Django to EC2
+name: Deploy Django App to EC2 using Docker Compose
 
 on:
   push:
     branches:
-      - main  # Runs on push to 'main' branch
+      - main  # Trigger deployment when changes are pushed to the main branch
 
 jobs:
-  deploy:
-    runs-on: self-hosted  # Runs on your GitHub Actions self-hosted runner
-    steps:
+  build_and_deploy:
+    runs-on: ubuntu-latest
 
+    steps:
+      # Step 1: Check out the code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.DEPLOYMENT_EC2_IP }} >> ~/.ssh/known_hosts
+      # Step 2: Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: Deploy code to EC2
-        run: |
-          rsync -avz --exclude='db/*' \
-            -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" \
-            ./ ubuntu@${{ secrets.DEPLOYMENT_EC2_IP }}:/home/ubuntu/django-app
+      # Step 3: Set up Docker Compose
+      - name: Set up Docker Compose
+        uses: docker/setup-buildx-action@v2
 
-      - name: Start Django with Docker Compose
+      # Step 4: Build the Docker Compose services
+      - name: Build Docker Compose services
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.DEPLOYMENT_EC2_IP }} << 'EOF'
-            cd /home/ubuntu/django-app
-            docker-compose down
-            docker-compose up --build -d
-            docker system prune -af
-          EOF
+          docker-compose -f docker-compose.yml build
+
+      # Step 5: SSH into EC2 and deploy with Docker Compose
+      - name: SSH to EC2 and deploy
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Step 6: Pull the latest code from GitHub
+            cd /app
+            git pull origin main
+
+            # Step 7: Ensure Docker Compose is installed (Optional if already installed)
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+
+            # Step 8: Build the Docker Compose services
+            docker-compose -f /app/docker-compose.yml build
+
+            # Step 9: Stop and remove the old container(s)
+            docker-compose -f /app/docker-compose.yml down
+
+            # Step 10: Run Docker Compose to start the services
+            docker-compose -f /app/docker-compose.yml up -d
