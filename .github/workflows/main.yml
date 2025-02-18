@@ -27,7 +27,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}  # Make sure this secret contains your EC2's IP
           username: ubuntu  # Ensure 'ubuntu' is used since your EC2 uses Ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}  # Ensure the correct private key is stored in secrets
+          key: ${{ secrets.EC2_SSH_KEY }}  # Ensure the correct private key is stored in secretss
           script: |
             cd /app
             git pull origin main
