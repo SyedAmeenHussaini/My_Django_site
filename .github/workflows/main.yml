@@ -19,18 +19,30 @@ jobs:
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
 
-      - name: Build Docker Compose services
-        run: docker-compose -f docker-compose.yml build
-
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
-          host: ${{ secrets.EC2_HOST }}  # Make sure this secret contains your EC2's IP
+          host: ${{ secrets.EC2_HOST }}  # Ensure this secret contains your EC2's IP
           username: ubuntu  # Ensure 'ubuntu' is used since your EC2 uses Ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}  # Ensure the correct private key is stored in secretss
+          key: ${{ secrets.EC2_SSH_KEY }}  # Ensure the correct private key is stored in secrets
           script: |
-            cd /app
-            git pull origin main
+            # Check if the /app directory exists; if not, create it
+            if [ ! -d "/app" ]; then
+              echo "Directory /app not found. Cloning repository..."
+              git clone https://github.com/your-repository-url.git /app
+            else
+              cd /app
+              git pull origin main
+            fi
+            
+            # Install docker-compose if not already installed
+            if ! command -v docker-compose &> /dev/null; then
+              echo "Docker Compose not found, installing..."
+              sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
+            # Build, down, and up the Docker containers
             docker-compose -f /app/docker-compose.yml build
             docker-compose -f /app/docker-compose.yml down
             docker-compose -f /app/docker-compose.yml up -d
