@@ -22,7 +22,7 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
-          host: ${{ secrets.EC2_HOST }}  # Your EC2's public IP or hostname
+          host: ${{ secrets.EC2_HOST }}  # Your EC2's public IP or hostname .
           username: ubuntu  # Assuming your EC2 is running Ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key stored in GitHub secrets
           script: |
