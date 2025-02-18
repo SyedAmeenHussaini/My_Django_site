@@ -26,12 +26,12 @@ jobs:
           username: ubuntu  # Assuming your EC2 is running Ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key stored in GitHub secrets
           script: |
-            # Check if the /app directory exists; if not, clone the repository
-            if [ ! -d "/app" ]; then
-              echo "Directory /app not found. Cloning repository..."
-              git clone https://github.com/SyedAmeenHussaini/My_Django_site.git /app
+            # Create /home/ubuntu/app directory if it doesn't exist and clone repository
+            if [ ! -d "/home/ubuntu/app" ]; then
+              echo "Directory /home/ubuntu/app not found. Cloning repository..."
+              git clone https://github.com/SyedAmeenHussaini/My_Django_site.git /home/ubuntu/app
             else
-              cd /app
+              cd /home/ubuntu/app
               git pull origin main
             fi
             
@@ -43,6 +43,7 @@ jobs:
             fi
 
             # Build, down, and up the Docker containers
-            docker-compose -f /app/docker-compose.yml build
-            docker-compose -f /app/docker-compose.yml down
-            docker-compose -f /app/docker-compose.yml up -d
+            cd /home/ubuntu/app
+            docker-compose -f /home/ubuntu/app/docker-compose.yml build
+            docker-compose -f /home/ubuntu/app/docker-compose.yml down
+            docker-compose -f /home/ubuntu/app/docker-compose.yml up -d
